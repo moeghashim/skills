@@ -41,28 +41,30 @@ Once the plugin is available, finish the setup:
 
 ## Step 3 — Operate with this delegation workflow
 
-For the rest of the session, follow this division of labor:
+For the rest of the session, follow this workflow:
 
-**You (Claude / Fable 5) are the orchestrator.** Use yourself for:
-- Planning and task decomposition
-- Repo understanding and architecture decisions
-- Final review of all delegated work
+**You (Claude / Fable 5) are the orchestrator.** Stay in the main loop for decomposition and final decisions. Do not do heavy reading or heavy implementation inline — fire subagents for both.
 
-**Codex (`codex-rescue`) is the executor.** Delegate to it when a task needs:
-- Heavy implementation
-- Debugging or test fixing
-- Refactoring
-- Multi-file code edits
+**Fable subagents (planning/understanding/review):**
+- Spawn Fable 5 subagents via the Agent tool: `Explore` agents for repo understanding and broad searches, `Plan` agents for implementation strategy, `general-purpose` agents for research and reviewing completed work.
+- When tasks are independent, launch all subagents in one message so they run concurrently.
 
-Delegation rules:
-- When delegating to Codex, use `/codex:rescue`.
-- Prefer **GPT 5.5 (xtra high)** as the go-to Codex model.
-- Keep Codex tasks focused and specific — one well-scoped task per delegation, not a vague "fix everything".
-- After Codex finishes, inspect the result yourself before accepting it. Do not blindly trust Codex output.
+**Codex subagents (execution):**
+- Use codex-rescue as the executor when a task needs heavy implementation, debugging, test fixing, refactoring, or multi-file code edits.
+- Delegate via the Agent tool with `subagent_type: "codex:codex-rescue"` (equivalent to `/codex:rescue`). Run Codex agents in the background so you can keep orchestrating, and run multiple Codex agents in parallel when tasks are independent.
+- Use `gpt-5.6-codex` at medium effort as the go-to Codex model — pass `--model gpt-5.6-codex --effort medium` when delegating.
+- Keep each Codex task focused and specific: one scoped objective per agent, with exact file paths, constraints, and acceptance criteria (e.g. "these tests must pass"). Never delegate a vague "fix everything" task.
+- If parallel Codex agents would touch overlapping files, either serialize them or isolate each in its own worktree, then merge.
+
+**Verification (non-negotiable):**
+- After any subagent finishes, inspect the result yourself before accepting: read the diff, run the tests/build, check the acceptance criteria. Do not blindly trust Codex output.
+- If a result fails inspection, send a focused follow-up to the same Codex thread (`--resume`) instead of restarting from scratch.
+- Only report a task as done after your own verification passes.
 
 ## Pro tips
 
 1. Invoke this skill at the start of every session where Codex delegation is wanted.
-2. Combine the skill with a goal for heavy tasks — goals work best for long-horizon work.
-3. On the Codex 20x Pro plan, sub-agents can run in parallel: 5–7 Codex agents at a time typically stays under the 5-hour limit.
-4. Context rot is real — clear the conversation after ~4 compactions. Use a `/handoff` skill (if available) to preserve context across the reset.
+2. Make sure the session itself runs on Fable 5 (`/model` → Fable 5) — the orchestrator is the main-loop model. The Claude Code header always shows the Claude model, never Codex; Codex activity appears as `codex:codex-rescue` agents in the task/agent activity.
+3. Combine the skill with a goal for heavy tasks — goals work best for long-horizon work.
+4. On the Codex 20x Pro plan, sub-agents can run in parallel: 5–7 Codex agents at a time typically stays under the 5-hour limit.
+5. Context rot is real — clear the conversation after ~4 compactions. Use a `/handoff` skill (if available) to preserve context across the reset.
