@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Install skills from github.com/moeghashim/skills into your Claude Code skills directory.
+# Fallback installer for github.com/moeghashim/skills (no Node needed).
+# Preferred install: npx skills@latest add moeghashim/skills
 #
 # From a clone:
 #   ./install.sh --list                  # show available skills
@@ -20,7 +21,10 @@ usage() {
   cat <<EOF
 Install skills from github.com/$REPO into your Claude Code skills directory.
 
-Usage:
+Preferred (interactive, multi-agent):
+  npx skills@latest add $REPO
+
+This script (no Node needed):
   install.sh --list                  Show available skills
   install.sh <skill> [<skill>...]    Install specific skill(s)
   install.sh --all                   Install every skill
@@ -52,7 +56,7 @@ done
 
 # Use the repo we're running from if it contains skills; otherwise fetch from GitHub.
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]:-.}")" 2>/dev/null && pwd || echo "")"
-if [ -n "$script_dir" ] && compgen -G "$script_dir/*/SKILL.md" > /dev/null 2>&1; then
+if [ -n "$script_dir" ] && compgen -G "$script_dir/skills/*/*/SKILL.md" > /dev/null 2>&1; then
   SRC="$script_dir"
 else
   tmp="$(mktemp -d)"
@@ -62,41 +66,59 @@ else
   SRC="$tmp/skills-$BRANCH"
 fi
 
-available=()
-for f in "$SRC"/*/SKILL.md; do
+# Discover skills at skills/<category>/<name>/SKILL.md, skipping non-installable categories.
+names=()
+paths=()
+for f in "$SRC"/skills/*/*/SKILL.md; do
   [ -e "$f" ] || continue
-  available+=("$(basename "$(dirname "$f")")")
+  d="$(dirname "$f")"
+  case "$d" in
+    "$SRC"/skills/deprecated/*|"$SRC"/skills/in-progress/*) continue ;;
+  esac
+  names+=("$(basename "$d")")
+  paths+=("$d")
 done
 
-if [ ${#available[@]} -eq 0 ]; then
+if [ ${#names[@]} -eq 0 ]; then
   echo "error: no skills found in $SRC" >&2
   exit 1
 fi
 
 if [ "$list_only" = true ]; then
   echo "Available skills:"
-  for s in "${available[@]}"; do
-    desc="$(sed -n 's/^description: *>*-*//p' "$SRC/$s/SKILL.md" | head -1)"
-    [ -n "$desc" ] && echo "  $s -$desc" || echo "  $s"
+  i=0
+  while [ $i -lt ${#names[@]} ]; do
+    rel="${paths[$i]#"$SRC"/skills/}"
+    echo "  ${names[$i]}  (${rel%/*})"
+    i=$((i + 1))
   done
   exit 0
 fi
 
 if [ "$install_all" = true ]; then
-  requested=("${available[@]}")
+  requested=("${names[@]}")
 fi
 
 if [ ${#requested[@]} -eq 0 ]; then
   usage
   echo
-  echo "Available skills: ${available[*]}"
+  echo "Available skills: ${names[*]}"
   exit 1
 fi
 
 mkdir -p "$TARGET"
 for s in "${requested[@]}"; do
-  if [ ! -f "$SRC/$s/SKILL.md" ]; then
-    echo "error: unknown skill '$s' (available: ${available[*]})" >&2
+  src_path=""
+  i=0
+  while [ $i -lt ${#names[@]} ]; do
+    if [ "${names[$i]}" = "$s" ]; then
+      src_path="${paths[$i]}"
+      break
+    fi
+    i=$((i + 1))
+  done
+  if [ -z "$src_path" ]; then
+    echo "error: unknown skill '$s' (available: ${names[*]})" >&2
     exit 1
   fi
   if [ -d "$TARGET/$s" ]; then
@@ -105,7 +127,7 @@ for s in "${requested[@]}"; do
   else
     action="Installed"
   fi
-  cp -R "$SRC/$s" "$TARGET/$s"
+  cp -R "$src_path" "$TARGET/$s"
   echo "$action $s -> $TARGET/$s"
 done
 

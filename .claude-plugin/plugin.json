@@ -1,0 +1,6 @@
+{
+  "name": "moeghashim-skills",
+  "skills": [
+    "./skills/engineering/gpt-claude"
+  ]
+}

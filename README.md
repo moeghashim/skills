@@ -1,25 +1,36 @@
 # Skills
 
-Agent skills for Claude Code.
+Moe's agent skills for Claude Code and other coding agents.
 
-## Available skills
+## Quickstart
 
-- **[gpt-claude](gpt-claude/SKILL.md)** — Set up the OpenAI Codex plugin inside Claude Code and run a Claude-as-orchestrator / Codex-as-executor workflow: Claude plans, decomposes, and reviews; Codex executes heavy implementation via `/codex:rescue`.
+1. Run the skills.sh installer:
 
-## Installation
-
-One-liner, no clone needed:
-
+```bash
+npx skills@latest add moeghashim/skills
 ```
+
+2. Pick the skills you want, and which coding agents you want to install them on.
+
+3. Invoke a skill in your agent with `/<skill-name>` (e.g. `/gpt-claude`).
+
+<details>
+<summary>Alternative install (no Node needed)</summary>
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/moeghashim/skills/main/install.sh | bash -s -- gpt-claude
 ```
 
-Or from a clone:
+Or from a clone: `./install.sh --list`, `./install.sh <skill>`, `./install.sh --all`. Skills install to `~/.claude/skills` by default; override with `--dir PATH` or `$CLAUDE_SKILLS_DIR`. Re-running updates an installed skill.
 
-```
-./install.sh --list        # show available skills
-./install.sh gpt-claude    # install one skill
-./install.sh --all         # install every skill
-```
+</details>
 
-Skills install to `~/.claude/skills` by default; override with `--dir PATH` or `$CLAUDE_SKILLS_DIR`. Re-running updates an already-installed skill. After installing, restart Claude Code (or `/reload-plugins`) and invoke with `/<skill-name>`.
+## Repo structure
+
+Skills live at `skills/<category>/<skill-name>/SKILL.md`. Run `scripts/list-skills.sh` to list them all.
+
+## Reference
+
+### Engineering
+
+- **[gpt-claude](./skills/engineering/gpt-claude/SKILL.md)** — Set up the OpenAI Codex plugin inside Claude Code and run a Claude-as-orchestrator / Codex-as-executor workflow: Claude (Fable 5) plans, decomposes, and reviews; Codex (`gpt-5.6-codex`) executes heavy implementation as parallel background subagents.
